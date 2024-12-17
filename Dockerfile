@@ -1,32 +1,28 @@
 FROM php:8.2-apache
 
-# Instalacija potrebnih PHP ekstenzija
+# Instalacija potrebnih ekstenzija
 RUN apt-get update && apt-get install -y \
     libzip-dev unzip libxml2-dev \
     && docker-php-ext-install zip mysqli pdo pdo_mysql \
     && apt-get clean
 
-# Dodavanje Composer-a
+# Instalacija Composera
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Postavljanje root direktorijuma i kopiranje fajlova
-WORKDIR /var/www/html
-COPY . /var/www/html
+# Kopiranje aplikacije i .env fajla
+COPY . /var/www/html/
+COPY .env /var/www/html/.env
 
-# Pokretanje 'composer install'
-RUN composer install --no-interaction --prefer-dist
+# Postavljanje permisija
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
 
-# Podešavanje dozvola
-RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
-
-# Kopiranje Apache konfiguracije
+# Aktivacija mod_rewrite i Apache konfiguracije
+RUN a2enmod rewrite
 COPY apache.conf /etc/apache2/sites-available/000-default.conf
 
-# Omogućavanje mod_rewrite za Apache
-RUN a2enmod rewrite
-
-# Izlaganje porta
+# Eksport porta 80
 EXPOSE 80
 
-# Start Apache
+# Pokretanje Apache servera
 CMD ["apache2-foreground"]
