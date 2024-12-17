@@ -1,27 +1,41 @@
-# 1. Koristimo zvaničnu PHP sliku sa Apache serverom
 FROM php:8.2-apache
 
-# 2. Instalacija potrebnih PHP ekstenzija i Composer-a
+# Instalacija potrebnih PHP ekstenzija
 RUN apt-get update && apt-get install -y \
     libzip-dev unzip libxml2-dev \
     && docker-php-ext-install zip mysqli pdo pdo_mysql \
     && apt-get clean
 
-# 3. Instalacija Composer-a
+# Dodavanje Composer-a
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# 4. Kopiramo ceo projekat u /var/www/html
-COPY . /var/www/html/
+# Postavljanje root direktorijuma na 'public'
+WORKDIR /var/www/html
+COPY . /var/www/html
 
-# 5. Podešavanje prava
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html
+# Pokretanje 'composer install' za zavisnosti
+RUN composer install --no-interaction --prefer-dist
 
-# 6. Omogućavanje Apache mod_rewrite (neophodno za routing)
+# Podešavanje dozvola
+RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
+
+# Apache konfiguracija za 'public' kao root folder
+RUN echo "<VirtualHost *:80>
+    DocumentRoot /var/www/html/public
+    <Directory /var/www/html/public>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    ErrorLog /var/log/apache2/error.log
+    CustomLog /var/log/apache2/access.log combined
+</VirtualHost>" > /etc/apache2/sites-available/000-default.conf
+
+# Omogućavanje mod_rewrite za Apache
 RUN a2enmod rewrite
 
-# 7. Izlaganje porta 80
+# Izlaganje porta (Docker default: 80 za HTTP)
 EXPOSE 80
 
-# 8. Pokrećemo Apache server
+# Start Apache
 CMD ["apache2-foreground"]
