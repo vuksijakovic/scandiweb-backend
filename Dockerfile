@@ -9,9 +9,7 @@ RUN apt-get update && apt-get install -y \
 # Instalacija Composera
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Kopiranje aplikacije i .env fajla
 COPY . /var/www/html/
-COPY .env /var/www/html/.env
 
 # Postavljanje permisija
 RUN chown -R www-data:www-data /var/www/html \
