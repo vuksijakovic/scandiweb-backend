@@ -9,32 +9,23 @@ RUN apt-get update && apt-get install -y \
 # Dodavanje Composer-a
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Postavljanje root direktorijuma na 'public'
+# Postavljanje root direktorijuma i kopiranje fajlova
 WORKDIR /var/www/html
 COPY . /var/www/html
 
-# Pokretanje 'composer install' za zavisnosti
+# Pokretanje 'composer install'
 RUN composer install --no-interaction --prefer-dist
 
 # Podešavanje dozvola
 RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
 
-# Apache konfiguracija za 'public' kao root folder
-RUN echo "<VirtualHost *:80>
-    DocumentRoot /var/www/html/public
-    <Directory /var/www/html/public>
-        Options Indexes FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-    ErrorLog /var/log/apache2/error.log
-    CustomLog /var/log/apache2/access.log combined
-</VirtualHost>" > /etc/apache2/sites-available/000-default.conf
+# Kopiranje Apache konfiguracije
+COPY apache.conf /etc/apache2/sites-available/000-default.conf
 
 # Omogućavanje mod_rewrite za Apache
 RUN a2enmod rewrite
 
-# Izlaganje porta (Docker default: 80 za HTTP)
+# Izlaganje porta
 EXPOSE 80
 
 # Start Apache
